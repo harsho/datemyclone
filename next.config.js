@@ -15,9 +15,6 @@ const nextConfig = {
     config.externals = [...config.externals, 'bcrypt'];
     return config;
   }, 
-  experimental: {
-    ppr: true,
-  },
   images: {
     remotePatterns: [
       {
