@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import * as AI from 'ai';
+import { Message, StreamingTextResponse } from 'ai';
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('Missing OPENAI_API_KEY environment variable');
@@ -10,7 +10,7 @@ const openai = new OpenAI({
 });
 
 export const customModel = (apiIdentifier: string) => {
-  return async (messages: AI.Message[]) => {
+  return async (messages: Message[]) => {
     const response = await openai.chat.completions.create({
       model: apiIdentifier,
       messages: messages.map((m) => ({
@@ -24,6 +24,6 @@ export const customModel = (apiIdentifier: string) => {
     });
 
     // Convert the response into a friendly text-stream
-    return new AI.StreamingTextResponse(response.body);
+    return new StreamingTextResponse(response.body);
   };
 };
