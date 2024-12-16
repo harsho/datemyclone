@@ -3,7 +3,6 @@
 import { z } from 'zod';
 
 import { createUser, getUser } from '@/lib/db/queries';
-
 import { signIn } from './auth';
 
 const authFormSchema = z.object({
@@ -11,14 +10,11 @@ const authFormSchema = z.object({
   password: z.string().min(6),
 });
 
-export interface LoginActionState {
-  status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data';
+export interface ActionState {
+  status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data' | 'user_exists';
 }
 
-export const login = async (
-  _: LoginActionState,
-  formData: FormData,
-): Promise<LoginActionState> => {
+export async function login(formData: FormData): Promise<ActionState> {
   try {
     const validatedData = authFormSchema.parse({
       email: formData.get('email'),
@@ -36,37 +32,23 @@ export const login = async (
     if (error instanceof z.ZodError) {
       return { status: 'invalid_data' };
     }
-
     return { status: 'failed' };
   }
-};
-
-export interface RegisterActionState {
-  status:
-    | 'idle'
-    | 'in_progress'
-    | 'success'
-    | 'failed'
-    | 'user_exists'
-    | 'invalid_data';
 }
 
-export const register = async (
-  _: RegisterActionState,
-  formData: FormData,
-): Promise<RegisterActionState> => {
+export async function register(formData: FormData): Promise<ActionState> {
   try {
     const validatedData = authFormSchema.parse({
       email: formData.get('email'),
       password: formData.get('password'),
     });
 
-    const [user] = await getUser(validatedData.email);
-
-    if (user) {
-      return { status: 'user_exists' } as RegisterActionState;
+    const existingUser = await getUser(validatedData.email);
+    if (existingUser) {
+      return { status: 'user_exists' };
     }
-    await createUser(validatedData.email, validatedData.password);
+
+    await createUser(validatedData);
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,
@@ -78,7 +60,6 @@ export const register = async (
     if (error instanceof z.ZodError) {
       return { status: 'invalid_data' };
     }
-
     return { status: 'failed' };
   }
-};
+}

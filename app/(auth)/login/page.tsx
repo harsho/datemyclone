@@ -2,41 +2,37 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 
-import { login, type LoginActionState } from '../actions';
+import { login } from '../actions';
 
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
-  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [state, formAction] = useActionState<LoginActionState, FormData>(
-    login,
-    {
-      status: 'idle',
-    },
-  );
-
-  useEffect(() => {
-    if (state.status === 'failed') {
-      toast.error('Invalid credentials!');
-    } else if (state.status === 'invalid_data') {
-      toast.error('Failed validating your submission!');
-    } else if (state.status === 'success') {
-      setIsSuccessful(true);
-      router.refresh();
+  const handleSubmit = async (formData: FormData) => {
+    try {
+      setIsLoading(true);
+      const result = await login(formData);
+      
+      if (result.status === 'failed') {
+        toast.error('Invalid credentials!');
+      } else if (result.status === 'invalid_data') {
+        toast.error('Failed validating your submission!');
+      } else if (result.status === 'success') {
+        router.refresh();
+        router.push('/');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setIsLoading(false);
     }
-  }, [state.status, router]);
-
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get('email') as string);
-    formAction(formData);
   };
 
   return (
@@ -49,17 +45,20 @@ export default function Page() {
           </p>
         </div>
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
-          <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
-            {"Don't have an account? "}
-            <Link
-              href="/register"
-              className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
+          <div className="flex flex-col gap-2">
+            <SubmitButton
+              className="w-full"
+              disabled={isLoading}
             >
-              Sign up
-            </Link>
-            {' for free.'}
-          </p>
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </SubmitButton>
+            <p className="text-center text-sm text-zinc-500">
+              Don't have an account?{' '}
+              <Link href="/register" className="font-semibold text-zinc-900">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </AuthForm>
       </div>
     </div>

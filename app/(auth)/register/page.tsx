@@ -2,44 +2,40 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 
-import { register, type RegisterActionState } from '../actions';
+import { register } from '../actions';
 
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
-  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [state, formAction] = useActionState<RegisterActionState, FormData>(
-    register,
-    {
-      status: 'idle',
-    },
-  );
-
-  useEffect(() => {
-    if (state.status === 'user_exists') {
-      toast.error('Account already exists');
-    } else if (state.status === 'failed') {
-      toast.error('Failed to create account');
-    } else if (state.status === 'invalid_data') {
-      toast.error('Failed validating your submission!');
-    } else if (state.status === 'success') {
-      toast.success('Account created successfully');
-      setIsSuccessful(true);
-      router.refresh();
+  const handleSubmit = async (formData: FormData) => {
+    try {
+      setIsLoading(true);
+      const result = await register(formData);
+      
+      if (result.status === 'user_exists') {
+        toast.error('Account already exists');
+      } else if (result.status === 'failed') {
+        toast.error('Failed to create account');
+      } else if (result.status === 'invalid_data') {
+        toast.error('Failed validating your submission!');
+      } else if (result.status === 'success') {
+        toast.success('Account created successfully');
+        router.refresh();
+        router.push('/');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setIsLoading(false);
     }
-  }, [state, router]);
-
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get('email') as string);
-    formAction(formData);
   };
 
   return (
@@ -52,17 +48,20 @@ export default function Page() {
           </p>
         </div>
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
-          <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
-            {'Already have an account? '}
-            <Link
-              href="/login"
-              className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
+          <div className="flex flex-col gap-2">
+            <SubmitButton
+              className="w-full"
+              disabled={isLoading}
             >
-              Sign in
-            </Link>
-            {' instead.'}
-          </p>
+              {isLoading ? 'Creating account...' : 'Create account'}
+            </SubmitButton>
+            <p className="text-center text-sm text-zinc-500">
+              Already have an account?{' '}
+              <Link href="/login" className="font-semibold text-zinc-900">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </AuthForm>
       </div>
     </div>
